@@ -1,10 +1,11 @@
 """
-Database caching service for storing and retrieving calculations
+Database caching service for storing and retrieving calculations with pagination and search
 """
 from sqlalchemy.orm import Session
+from sqlalchemy import or_, desc, asc, func, String
 from app.database import CircuityCalculation
 from app.models import CircuityRequest, CircuityResponse, Location
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 class CacheService:
     
@@ -85,12 +86,58 @@ class CacheService:
     @staticmethod
     def get_calculation_history(db: Session, limit: int = 50) -> List[CircuityCalculation]:
         """
-        Get recent calculation history
+        Get recent calculation history (legacy method)
         """
         return db.query(CircuityCalculation)\
                  .order_by(CircuityCalculation.created_at.desc())\
                  .limit(limit)\
                  .all()
+    
+    @staticmethod
+    def get_calculation_history_paginated(
+        db: Session, 
+        page: int = 1, 
+        limit: int = 20, 
+        search: Optional[str] = None,
+        sort_by: str = "newest"
+    ) -> Tuple[List[CircuityCalculation], int]:
+        """
+        Get paginated calculation history with search and sorting
+        Returns tuple of (items, total_count)
+        """
+        query = db.query(CircuityCalculation)
+        
+        # Apply search filter
+        if search and search.strip():
+            search_term = f"%{search.strip()}%"
+            query = query.filter(
+                or_(
+                    CircuityCalculation.origin_name.ilike(search_term),
+                    CircuityCalculation.destination_name.ilike(search_term),
+                    # Convert numeric fields to string for searching
+                    func.cast(CircuityCalculation.id, String).like(search_term),
+                    func.cast(CircuityCalculation.circuity_factor, String).like(search_term)
+                )
+            )
+        
+        # Get total count before pagination
+        total_count = query.count()
+        
+        # Apply sorting
+        if sort_by == "oldest":
+            query = query.order_by(asc(CircuityCalculation.created_at))
+        elif sort_by == "circuity_asc":
+            query = query.order_by(asc(CircuityCalculation.circuity_factor))
+        elif sort_by == "circuity_desc":
+            query = query.order_by(desc(CircuityCalculation.circuity_factor))
+        else:  # "newest" or default
+            query = query.order_by(desc(CircuityCalculation.created_at))
+        
+        # Apply pagination
+        offset = (page - 1) * limit
+        items = query.offset(offset).limit(limit).all()
+        
+        return items, total_count
     
     @staticmethod
     def get_calculation_stats(db: Session) -> dict:
@@ -108,11 +155,11 @@ class CacheService:
         
         # Calculate averages
         avg_circuity = db.query(
-            db.func.avg(CircuityCalculation.circuity_factor)
+            func.avg(CircuityCalculation.circuity_factor)
         ).scalar()
         
         avg_efficiency = db.query(
-            db.func.avg(CircuityCalculation.efficiency_percent)
+            func.avg(CircuityCalculation.efficiency_percent)
         ).scalar()
         
         return {

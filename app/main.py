@@ -8,7 +8,6 @@ import uvicorn
 from app.database import create_tables, test_connection
 from app.routers import circuity
 
-# Create FastAPI app
 app = FastAPI(
     title="California Circuity Factor API",
     description="Calculate transportation efficiency using circuity factors",
@@ -17,7 +16,6 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Configure this for production
@@ -26,24 +24,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
 app.include_router(circuity.router, tags=["circuity"])
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize database tables on startup"""
-    print("🚀 Starting California Circuity Factor API...")
-    print("📊 Creating database tables...")
+    print("Starting California Circuity Factor API...")
+    print("Creating database tables...")
     create_tables()
     
-    # Test connections
     db_connected = test_connection()
     print(f"🗄️  Database: {'Connected' if db_connected else 'Failed'}")
     
     from app.services.distance_service import DistanceService
     distance_service = DistanceService()
     osrm_connected = distance_service.test_osrm_connection()
-    print(f"🗺️  OSRM: {'Connected' if osrm_connected else 'Failed'}")
+    print(f"OSRM: {'Connected' if osrm_connected else 'Failed'}")
     
     if db_connected and osrm_connected:
         print("All services ready!")

@@ -18,10 +18,8 @@ class DistanceService:
         """
         Calculate straight-line distance using Haversine formula
         """
-        # Earth's radius
         R = 3959 if units == "miles" else 6371  # miles or kilometers
         
-        # Convert to radians
         lat1_rad = math.radians(lat1)
         lat2_rad = math.radians(lat2)
         dlat = math.radians(lat2 - lat1)
@@ -60,7 +58,6 @@ class DistanceService:
             if not data.get("routes"):
                 raise Exception("No routes found")
             
-            # Distance from OSRM is in meters
             distance_km = data["routes"][0]["distance"] / 1000
             distance = distance_km * 0.621371 if units == "miles" else distance_km
             
@@ -78,11 +75,9 @@ class DistanceService:
         """
         start_time = time.time()
         
-        # Calculate both distances
         straight_distance = self.calculate_straight_distance(lat1, lng1, lat2, lng2, units)
         road_distance = self.calculate_road_distance(lat1, lng1, lat2, lng2, units)
         
-        # Calculate metrics
         circuity_factor = round(road_distance / straight_distance, 3)
         efficiency_percent = round((straight_distance / road_distance) * 100, 2)
         
