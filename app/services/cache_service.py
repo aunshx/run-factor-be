@@ -22,9 +22,6 @@ class CacheService:
     
     @staticmethod
     def get_cached_calculation(db: Session, request: CircuityRequest) -> Optional[CircuityResponse]:
-        """
-        Look for existing calculation in database
-        """
         # Check both directions (A->B and B->A should give same result)
         calc = db.query(CircuityCalculation).filter(
             CircuityCalculation.origin_lat == round(request.origin.lat, 6),
